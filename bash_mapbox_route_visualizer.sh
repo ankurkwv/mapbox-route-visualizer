@@ -137,7 +137,20 @@ done
 geojson=${geojson%,}
 geojson+=']}'
 
-echo "$geojson" > route.geojson
+# Check if the file exists, if not create it
+if [ ! -f "route.geojson" ]; then
+    touch route.geojson
+    if [ $? -ne 0 ]; then
+        echo -e "  \033[0;31m✗\033[0m Failed to create route.geojson. Exiting."
+        exit 1
+    fi
+fi
+
+# Write the GeoJSON to the file
+if ! echo "$geojson" > route.geojson; then
+    echo -e "  \033[0;31m✗\033[0m Failed to write to route.geojson. Exiting."
+    exit 1
+fi
 echo -e "  \033[0;32m✓\033[0m GeoJSON saved as route.geojson"
 
 # Format total variables
@@ -436,7 +449,7 @@ else
     echo "$RESPONSE"
 fi
 
-# Add date, legend, logo, and header to the image
+# Add date, legend, and header to the image
 if [ -f "$OUTPUT_IMAGE" ] && [ -s "$OUTPUT_IMAGE" ]; then
     echo -e "\n\033[1;33m✏️  Adding date to the image...\033[0m"
     magick "$OUTPUT_IMAGE" \
@@ -464,11 +477,6 @@ if [ -f "$OUTPUT_IMAGE" ] && [ -s "$OUTPUT_IMAGE" ]; then
         \) -gravity southwest -geometry +100+350 -composite \
         "$OUTPUT_IMAGE"
 
-    echo -e "\033[1;33m🖼️  Adding logo to the image...\033[0m"
-    magick "$OUTPUT_IMAGE" \
-        \( "/Users/ankur/My Drive/0005-Ride-With-Finn/Logo.png" -resize 200x200 \) \
-        -gravity southeast -geometry +150+620 -composite \
-        "$OUTPUT_IMAGE"
     echo -e "\n\033[1;36m🖊️  Adding 'LIVE TRIP MAP' header to the image...\033[0m"
     magick "$OUTPUT_IMAGE" \
         \( -size 70x70 xc:none -fill red -draw "circle 30,30 30,0" \) \
