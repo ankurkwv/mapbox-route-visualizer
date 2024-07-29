@@ -1,0 +1,26 @@
+# Ignore all image files
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.tiff
+
+# Ignore generated GeoJSON files
+*.geojson
+
+# Ignore temporary files
+*.tmp
+
+# Ignore log files
+*.log
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore any potential credential files
+*.env
+
+# Ignore any potential cache directories
+.cache/
