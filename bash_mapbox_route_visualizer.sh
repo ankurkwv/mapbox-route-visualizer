@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This script was developed with the assistance of Claude Sonnet 3.5, an AI language model created by Anthropic.
 
@@ -18,8 +18,6 @@ locations=(
   "Pownal, ME|gray"
   "Deer Isle, ME|gray"
 )
-
-#!/bin/bash
 
 # Mapbox API parameters
 USERNAME="ankurkwv"
@@ -106,30 +104,30 @@ done
 for i in $(seq 0 $((${#geocoded_locations[@]} - 2))); do
     IFS='|' read -r start start_location start_color <<< "${geocoded_locations[$i]}"
     IFS='|' read -r end end_location end_color <<< "${geocoded_locations[$((i+1))]}"
-    
+
     route_color="$start_color"
-    
+
     # Get directions
     directions_url="https://api.mapbox.com/directions/v5/mapbox/driving/${start};${end}?geometries=geojson&overview=full&access_token=${ACCESS_TOKEN}"
     directions_response=$(curl -s "$directions_url")
     echo -e "  \033[0;32m✓\033[0m Fetched directions for ${start_location} to ${end_location}"
     route_geometry=$(echo "$directions_response" | jq -c '.routes[0].geometry')
-    
+
     # Extract and format distance and duration
     distance_miles=$(echo "$directions_response" | jq -r '.routes[0].distance | . / 1609.344')
     duration_hours=$(echo "$directions_response" | jq -r '.routes[0].duration | . / 3600')
     distance_miles=$(printf "%.2f" $distance_miles)
     duration_hours=$(printf "%.2f" $duration_hours)
-    
+
     # Update totals
     miles_total=$(echo "$miles_total + $distance_miles" | bc)
     hours_total=$(echo "$hours_total + $duration_hours" | bc)
-    
+
     if [ "$route_color" = "blue" ]; then
         visited_miles_total=$(echo "$visited_miles_total + $distance_miles" | bc)
         visited_hours_total=$(echo "$visited_hours_total + $duration_hours" | bc)
     fi
-    
+
     geojson+='{"type":"Feature","geometry":'"$route_geometry"',"properties":{"start":"'"$start_location"'","end":"'"$end_location"'","color":"'"$route_color"'"}},'
 done
 
@@ -221,7 +219,7 @@ while true; do
   PROGRESS=$(echo $STATUS_RESPONSE | jq -r '.progress')
   ERROR=$(echo $STATUS_RESPONSE | jq -r '.error')
   echo -e "  \033[0;36m•\033[0m Complete: $COMPLETE, Progress: $PROGRESS, Error: $ERROR"
-  
+
   if [ "$COMPLETE" = "true" ]; then
     if [ "$ERROR" != "null" ]; then
       echo -e "  \033[0;31m✗\033[0m Upload failed with error: $ERROR"
@@ -236,13 +234,13 @@ while true; do
     echo -e "  \033[0;31m✗\033[0m Unexpected completion status: $COMPLETE"
     exit 1
   fi
-  
+
   ATTEMPTS=$((ATTEMPTS + 1))
   if [ $ATTEMPTS -ge $MAX_ATTEMPTS ]; then
     echo -e "  \033[0;31m✗\033[0m Maximum number of attempts reached. Exiting."
     exit 1
   fi
-  
+
   sleep 5
 done
 
@@ -388,7 +386,7 @@ STYLE_JSON=$(cat <<EOF
         "circle-stroke-color": "#ffffff"
       },
       "filter": ["==", ["geometry-type"], "Point"]
-    }, 
+    },
     {
       "id": "point-labels",
       "type": "symbol",
