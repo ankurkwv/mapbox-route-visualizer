@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This script was developed with the assistance of Claude Sonnet 3.5, an AI language model created by Anthropic.
 
@@ -19,10 +19,8 @@ locations=(
   "Deer Isle, ME|gray"
 )
 
-#!/bin/bash
-
 # Mapbox API parameters
-USERNAME="ankurkwv"
+USERNAME="${MAPBOX_USERNAME:-ankurkwv}"
 ACCESS_TOKEN="$MAPBOX_ACCESS_TOKEN"
 TILESET_NAME="bash_mapbox_route_visualizer" # Can be anything!
 TODAYS_DATE=$(date "+%B %d, %Y")
@@ -62,10 +60,13 @@ urlencode() {
 # Function to geocode a location
 geocode() {
     local location="$1"
-    local encoded_location=$(urlencode "$location")
+    local encoded_location
+    encoded_location=$(urlencode "$location")
     local url="https://api.mapbox.com/geocoding/v5/mapbox.places/${encoded_location}.json?access_token=${ACCESS_TOKEN}"
-    local response=$(curl -s "$url")
-    local coords=$(echo $response | jq -r '.features[0].center | "\(.[0]),\(.[1])"')
+    local response
+    response=$(curl -s "$url")
+    local coords
+    coords=$(echo "$response" | jq -r '.features[0].center | "\(.[0]),\(.[1])"')
     echo "$coords|$location"
 }
 
@@ -105,46 +106,37 @@ done
 # Add routes to GeoJSON and calculate totals
 for i in $(seq 0 $((${#geocoded_locations[@]} - 2))); do
     IFS='|' read -r start start_location start_color <<< "${geocoded_locations[$i]}"
-    IFS='|' read -r end end_location end_color <<< "${geocoded_locations[$((i+1))]}"
-    
+    IFS='|' read -r end end_location <<< "${geocoded_locations[$((i+1))]}"
+
     route_color="$start_color"
-    
+
     # Get directions
     directions_url="https://api.mapbox.com/directions/v5/mapbox/driving/${start};${end}?geometries=geojson&overview=full&access_token=${ACCESS_TOKEN}"
     directions_response=$(curl -s "$directions_url")
     echo -e "  \033[0;32m✓\033[0m Fetched directions for ${start_location} to ${end_location}"
     route_geometry=$(echo "$directions_response" | jq -c '.routes[0].geometry')
-    
+
     # Extract and format distance and duration
     distance_miles=$(echo "$directions_response" | jq -r '.routes[0].distance | . / 1609.344')
     duration_hours=$(echo "$directions_response" | jq -r '.routes[0].duration | . / 3600')
-    distance_miles=$(printf "%.2f" $distance_miles)
-    duration_hours=$(printf "%.2f" $duration_hours)
-    
+    distance_miles=$(printf "%.2f" "$distance_miles")
+    duration_hours=$(printf "%.2f" "$duration_hours")
+
     # Update totals
     miles_total=$(echo "$miles_total + $distance_miles" | bc)
     hours_total=$(echo "$hours_total + $duration_hours" | bc)
-    
+
     if [ "$route_color" = "blue" ]; then
         visited_miles_total=$(echo "$visited_miles_total + $distance_miles" | bc)
         visited_hours_total=$(echo "$visited_hours_total + $duration_hours" | bc)
     fi
-    
+
     geojson+='{"type":"Feature","geometry":'"$route_geometry"',"properties":{"start":"'"$start_location"'","end":"'"$end_location"'","color":"'"$route_color"'"}},'
 done
 
 # Finalize GeoJSON
 geojson=${geojson%,}
 geojson+=']}'
-
-# Check if the file exists, if not create it
-if [ ! -f "route.geojson" ]; then
-    touch route.geojson
-    if [ $? -ne 0 ]; then
-        echo -e "  \033[0;31m✗\033[0m Failed to create route.geojson. Exiting."
-        exit 1
-    fi
-fi
 
 # Write the GeoJSON to the file
 if ! echo "$geojson" > route.geojson; then
@@ -154,10 +146,10 @@ fi
 echo -e "  \033[0;32m✓\033[0m GeoJSON saved as route.geojson"
 
 # Format total variables
-visited_miles_total=$(printf "%'d" ${visited_miles_total%.*})
-miles_total=$(printf "%'d" ${miles_total%.*})
-visited_hours_total=$(printf "%'d" ${visited_hours_total%.*})
-hours_total=$(printf "%'d" ${hours_total%.*})
+visited_miles_total=$(printf "%'d" "${visited_miles_total%.*}")
+miles_total=$(printf "%'d" "${miles_total%.*}")
+visited_hours_total=$(printf "%'d" "${visited_hours_total%.*}")
+hours_total=$(printf "%'d" "${hours_total%.*}")
 
 echo -e "\n\033[1;33m📊 Trip Statistics:\033[0m"
 echo -e "  \033[0;36m•\033[0m Visited miles: \033[1m$visited_miles_total\033[0m"
@@ -171,16 +163,16 @@ CREDENTIALS=$(curl -s -X POST "https://api.mapbox.com/uploads/v1/${USERNAME}/cre
 
 sleep 3
 # Extract S3 details from credentials
-BUCKET=$(echo $CREDENTIALS | jq -r '.bucket')
-KEY=$(echo $CREDENTIALS | jq -r '.key')
-ACCESS_KEY_ID=$(echo $CREDENTIALS | jq -r '.accessKeyId')
-SECRET_ACCESS_KEY=$(echo $CREDENTIALS | jq -r '.secretAccessKey')
-SESSION_TOKEN=$(echo $CREDENTIALS | jq -r '.sessionToken')
+BUCKET=$(echo "$CREDENTIALS" | jq -r '.bucket')
+KEY=$(echo "$CREDENTIALS" | jq -r '.key')
+ACCESS_KEY_ID=$(echo "$CREDENTIALS" | jq -r '.accessKeyId')
+SECRET_ACCESS_KEY=$(echo "$CREDENTIALS" | jq -r '.secretAccessKey')
+SESSION_TOKEN=$(echo "$CREDENTIALS" | jq -r '.sessionToken')
 
 echo -e "\n\033[1;33m☁️  Uploading file to S3...\033[0m"
 CURRENT_DATE=$(date -u '+%a, %d %b %Y %H:%M:%S GMT')
 STRING_TO_SIGN="PUT\n\napplication/json\n${CURRENT_DATE}\nx-amz-acl:public-read\nx-amz-security-token:${SESSION_TOKEN}\n/${BUCKET}/${KEY}"
-SIGNATURE=$(echo -en ${STRING_TO_SIGN} | openssl sha1 -hmac ${SECRET_ACCESS_KEY} -binary | base64)
+SIGNATURE=$(echo -en "${STRING_TO_SIGN}" | openssl sha1 -hmac "${SECRET_ACCESS_KEY}" -binary | base64)
 
 UPLOAD_RESPONSE=$(curl -X PUT -T route.geojson \
   -H "Host: ${BUCKET}.s3.amazonaws.com" \
@@ -191,19 +183,20 @@ UPLOAD_RESPONSE=$(curl -X PUT -T route.geojson \
   -H "x-amz-acl: public-read" \
   "https://${BUCKET}.s3.amazonaws.com/${KEY}")
 
-echo -e "  \033[0;32m✓\033[0m S3 upload completed successfully!"
-
+# shellcheck disable=SC2181
 if [ $? -ne 0 ]; then
   echo -e "  \033[0;31m✗\033[0m S3 upload failed. Exiting."
   exit 1
 fi
+
+echo -e "  \033[0;32m✓\033[0m S3 upload completed successfully!"
 
 echo -e "\n\033[1;33m🗺️  Creating Mapbox Tileset upload...\033[0m"
 UPLOAD_RESPONSE=$(curl -s -X POST -H "Content-Type: application/json" \
   -d "{\"url\": \"http://${BUCKET}.s3.amazonaws.com/${KEY}\", \"tileset\": \"${USERNAME}.${TILESET_NAME}\"}" \
   "https://api.mapbox.com/uploads/v1/${USERNAME}?access_token=${ACCESS_TOKEN}")
 
-UPLOAD_ID=$(echo $UPLOAD_RESPONSE | jq -r '.id')
+UPLOAD_ID=$(echo "$UPLOAD_RESPONSE" | jq -r '.id')
 
 echo -e "  \033[0;32m✓\033[0m Mapbox Upload ID: \033[1m$UPLOAD_ID\033[0m"
 
@@ -217,11 +210,11 @@ ATTEMPTS=0
 MAX_ATTEMPTS=30
 while true; do
   STATUS_RESPONSE=$(curl -s "https://api.mapbox.com/uploads/v1/${USERNAME}/${UPLOAD_ID}?access_token=${ACCESS_TOKEN}")
-  COMPLETE=$(echo $STATUS_RESPONSE | jq -r '.complete')
-  PROGRESS=$(echo $STATUS_RESPONSE | jq -r '.progress')
-  ERROR=$(echo $STATUS_RESPONSE | jq -r '.error')
+  COMPLETE=$(echo "$STATUS_RESPONSE" | jq -r '.complete')
+  PROGRESS=$(echo "$STATUS_RESPONSE" | jq -r '.progress')
+  ERROR=$(echo "$STATUS_RESPONSE" | jq -r '.error')
   echo -e "  \033[0;36m•\033[0m Complete: $COMPLETE, Progress: $PROGRESS, Error: $ERROR"
-  
+
   if [ "$COMPLETE" = "true" ]; then
     if [ "$ERROR" != "null" ]; then
       echo -e "  \033[0;31m✗\033[0m Upload failed with error: $ERROR"
@@ -236,13 +229,13 @@ while true; do
     echo -e "  \033[0;31m✗\033[0m Unexpected completion status: $COMPLETE"
     exit 1
   fi
-  
+
   ATTEMPTS=$((ATTEMPTS + 1))
   if [ $ATTEMPTS -ge $MAX_ATTEMPTS ]; then
     echo -e "  \033[0;31m✗\033[0m Maximum number of attempts reached. Exiting."
     exit 1
   fi
-  
+
   sleep 5
 done
 
@@ -252,7 +245,7 @@ TILESET_ID="${USERNAME}.${TILESET_NAME}"
 
 # Fetch tileset information and extract center coordinates
 TILESET_INFO=$(curl -s "https://api.mapbox.com/v4/${TILESET_ID}.json?access_token=${ACCESS_TOKEN}")
-CENTER=$(echo $TILESET_INFO | jq -r '.center[0:2] | join(",")')
+CENTER=$(echo "$TILESET_INFO" | jq -r '.center[0:2] | join(",")')
 
 echo -e "  \033[0;36m•\033[0m Center: $CENTER"
 echo -e "  \033[0;36m•\033[0m Zoom: $ZOOM"
@@ -388,7 +381,7 @@ STYLE_JSON=$(cat <<EOF
         "circle-stroke-color": "#ffffff"
       },
       "filter": ["==", ["geometry-type"], "Point"]
-    }, 
+    },
     {
       "id": "point-labels",
       "type": "symbol",
@@ -419,7 +412,7 @@ STYLE_RESPONSE=$(curl -X POST "https://api.mapbox.com/styles/v1/${USERNAME}?acce
   -H "Content-Type: application/json" \
   -d "$STYLE_JSON")
 
-STYLE_ID=$(echo $STYLE_RESPONSE | jq -r '.id')
+STYLE_ID=$(echo "$STYLE_RESPONSE" | jq -r '.id')
 
 echo -e "\033[0;32m✓\033[0m Created custom style with ID: \033[1;36m$STYLE_ID\033[0m"
 
