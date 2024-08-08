@@ -20,7 +20,7 @@ locations=(
 )
 
 # Mapbox API parameters
-USERNAME="ankurkwv"
+USERNAME="${MAPBOX_USERNAME:-ankurkwv}"
 ACCESS_TOKEN="$MAPBOX_ACCESS_TOKEN"
 TILESET_NAME="bash_mapbox_route_visualizer" # Can be anything!
 TODAYS_DATE=$(date "+%B %d, %Y")
@@ -137,14 +137,6 @@ done
 # Finalize GeoJSON
 geojson=${geojson%,}
 geojson+=']}'
-
-# Check if the file exists, if not create it
-if [ ! -f "route.geojson" ]; then
-    if ! touch route.geojson; then
-        echo -e "  \033[0;31m✗\033[0m Failed to create route.geojson. Exiting."
-        exit 1
-    fi
-fi
 
 # Write the GeoJSON to the file
 if ! echo "$geojson" > route.geojson; then
