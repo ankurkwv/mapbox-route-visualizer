@@ -17,7 +17,7 @@ The Mapbox Route Visualizer is a powerful bash script that creates a visually ap
 - curl
 - jq (`brew install jq`)
 - ImageMagick (`brew install imagemagick`)
-- Mapbox account and access token
+- Mapbox account and access token (create a private one with _all_ scopes)
 
 ## Installation
 1. Clone this repository or download the `bash_mapbox_route_visualizer.sh` script.
@@ -28,7 +28,7 @@ The Mapbox Route Visualizer is a powerful bash script that creates a visually ap
 3. Ensure you have all the prerequisites installed.
 
 ## Configuration
-1. Set your Mapbox access token as an environment variable:
+1. Set your Mapbox access token (private with _all_ scopes) as an environment variable:
    ```
    export MAPBOX_ACCESS_TOKEN="your_mapbox_access_token_here"
    ```
@@ -45,7 +45,6 @@ This will execute the script and generate the map image based on the provided lo
 ## Credits
 This project was developed with the assistance of Claude Sonnet 3.5 and the team at Anthropic. Their support and contributions were invaluable in writing and refining the code.
 
-
 ## Disclaimer: Use at Your Own Risk
 
 This script is provided "as is" without any warranties or guarantees of any kind, either expressed or implied. The user assumes all responsibility and risk for the use of this script. The authors and contributors are not liable for any damages or losses resulting from the use or misuse of this script.
@@ -53,4 +52,3 @@ This script is provided "as is" without any warranties or guarantees of any kind
 Always review and test the script thoroughly before using it in any critical or production environment. It is recommended to use this script only for personal or educational purposes, and to exercise caution when working with APIs and external services.
 
 By using this script, you acknowledge that you have read this disclaimer, understand its contents, and agree to use the script at your own risk.
-
